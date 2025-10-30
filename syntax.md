@@ -16,15 +16,14 @@ addressed and loaded separately.
 all automatic
 - standard:
   - ints: `32`, `-3`, `0xFF`, `0o033`, `0b00100101`
-  - floats: `0.0014`, `12e9`, `32.`
+  - floats: `0.0014`, `12e9`, `32.`, `nan`, `inf`
   - strings: `"hello"`, `"\x1b[0m"`
   - bools: `true`, `false`
   - other: `null`
 - weird:
   - lists/arrays/vectors \(see [LIST OBJECT](#list-object)\)
   - meta \(see [META OBJECT](#meta-object)\)
-- no:
-  - dicts/maps
+  - dicts/maps: can be represented by objects
 
 more info in [BUILT-IN OBJECTS](#built-in-objects) section
 
@@ -45,10 +44,10 @@ more info in [BUILT-IN OBJECTS](#built-in-objects) section
 ## INCLUDES
 syntax: `add <filename>.osml;`
 
+this adds to current namespace:
 ```osml
 add example_blank.osml;
 ```
-this adds to current namespace
 
 to give it its own namespace:
 ```osml
@@ -83,22 +82,16 @@ valid attributes:
 to define:
 ```osml
 example_obj ( # the name of the object
-  a,           # defining an attribute
-  longB,       # a long annoying name
-  c = 2,       # default value
-  d[1..5] = 3, # min-max values
-
-  # real example:
-  longE = 5, # the e-value of the object
-  # |     |  |
-  # |     |  docstring for argument
-  # |     |  as a comment
-  # |     |
-  # |     default value
-  # |
-  # name
+  a,                  # defining an attribute
+  !b,                 # overpower overrides (1)
+  c = 2,              # default value
+  d[1 .. 5] = 3,      # min-max valid values [inclusive .. non-inclusive]
+  e = "hello",        # dynamic typed string
+  f:string = "world", # static typed string
+  g:list 
 )
 ```
+*\(1: see [overrides](#overrides)\)*
 
 ### a few real ones that will be used in the other examples
 ```osml
@@ -164,7 +157,7 @@ this is all within a scene
   ```
   like python would have
   `obj(2, 4, d=12)`
-  to skip c and override d,
+  to skip c and set d,
   we have this:
   ```osml
   obj 2 4 d(12);
@@ -172,7 +165,7 @@ this is all within a scene
   it skips 3rd arg (c), leaving it default,
   but specifies d (4th arg) by name
 
-  or we can do:
+  `.` in place of an argument keeps it default:
   ```osml
   obj 2 4 . 12;
   ```
@@ -185,7 +178,7 @@ this is all within a scene
   # bad syntax  ^
   ```
 
-  values can be in parintheses without overriding:
+  values can be in parintheses with or without setting by name:
   ```osml
   obj (2) (34) c(3) d(23);
   ```
@@ -218,8 +211,8 @@ scn4 {
 }
 ```
 in the case above,
-scn4 does non contain scn2 like scn3, but instead
-contains copies of each of scn2's items
+scn4 does non contain a copy of scn2 like scn3 does,
+but instead contains copies of each of scn2's items
 
 this allows there to be an in-place definition of a
 scene inside another:
@@ -230,9 +223,9 @@ scn5 {
   }
 }
 ```
-this does not make `subScn` a scene usable anywhere,
+this does not make `subScn` a scene usable anywhere else,
 but rather just makes a scene inside scn5 addressible
-as scn5.subScn
+as `scn5.subScn`
 
 this is bad syntax:
 ```osml
@@ -267,10 +260,14 @@ but that's against the point of this language.
 then in the real code you can go through and based on the
 object type and id, do things
 
+the reason this is the case is because this language is
+meant for cases where having things in order is not helpful
 
-# A BIT MORE MISC STUFF
+
+# MORE STUFF WITHIN SCENES
 
 ## scn6 {
+  ### OVERRIDES
   to change all default values of a name within a scene
   after a certain point, follow this syntax:
   ```osml
@@ -279,23 +276,29 @@ object type and id, do things
   ! b(23) d(44);
   obj; # vals: 10 23 3 44
   ```
-  change values by a relative amount
+  change values by a relative amount:
   ```osml
   ! a+(3) b-(4) c*(2) d/(4)
   obj; # vals: 13 19 6 11
   ```
-  to set/change all shorthands in an entire subscene
+  to set/change all values in an entire subscene when
+  making an instance:
   ```osml
-  scn2 ! x0 y+10;
+  scn2 ! x(0) y+(10);
+  ```
+  you can still unpack when doing this:
+  ```osml
+  *scn2 ! x(2) y+(4)
   ```
 
-  to make a value exempt from this, prefix it with !
-
-  to overrule this when overriding, make the override use !!
-
-  and so on
-
-  the more !, the more powerful
+  - to make a value exempt from this, prefix it with `!` on definition
+  - to overrule this when overriding, use `!!`
+  - to make a value exempt from that, prefix it with `!!` on definition
+  - and so on
+  - the one with more more `!` is the value that is used
+  - if they have the same amount then the original value is use
+  
+  overrides do affect subscenes
 
   ### FOR LOOPS
 
@@ -303,13 +306,19 @@ object type and id, do things
   you can't realistically do that by hand,
   so there are for loops:
   ```
-  # <var>(<start=0>;<stop>;<step=1>) {
-  #   <objects>
-  # }
+  <var>(<start=0>;<stop>;<step=1>) {
+    <objects>
+  }
   ```
   ```osml
-  i(;10;) {
+  i(0;10;1) {
     rect;
+  }
+  ```
+  when a value is omitted, the default is used:
+  ```osml
+  i(;10;) { # same as above
+	rect;
   }
   ```
   nested:
@@ -357,7 +366,7 @@ properties by adding a sub-object as
 a kind of namespace
 
 for example:
-```
+```osml
 obj2 (
   substuff (
     a = 0,
@@ -481,10 +490,25 @@ contract (
 ```
 
 why plain types?
+- for static typing
 - for lists of plain stuff
 ```osml
 obj6 (
   list . int,
+)
+```
+
+setting the values in a list:
+```osml
+obj7 (
+  a:list 4 int = (
+    1, 2, 3, 4,
+  )
+)
+obj8 (
+  a:list 2 rect(w(1) h(1)) = (
+    rect = ()
+  )
 )
 ```
 

@@ -4,3 +4,7 @@ rect (
 	w,
 	h,
 )
+
+scene {
+	rect 0 0 100 50;
+}
