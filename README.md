@@ -504,10 +504,20 @@ obj7 (
   a:list 4 int = (
     1, 2, 3, 4,
   )
-)
+) # default values in list
+
 obj8 (
   a:list 2 rect(w(1) h(1)) = (
-    rect = ()
+    # default constructors for each rect
+    (
+      w = 1,
+      h = 1
+	),
+    ., # use default for 2nd
+    (
+      w = 1,
+      h = . # use default h for 3rd
+    ),
   )
 )
 ```
